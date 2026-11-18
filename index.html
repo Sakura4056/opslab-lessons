@@ -207,7 +207,7 @@ body.dark .heat i.h1{background:#2a4a7a}body.dark .heat i.h2{background:#3a6ab8}
   <div id="view"><div class="wrap" id="viewbox">加载中…</div></div>
 </main>
 <div id="load">加载中…</div>
-<script></script>
+<script src="vendor/marked.min.js"></script>
 <script>
 /* ================= 内嵌数据（构建时注入） ================= */
 /* ================= 安全存储 ================= */
@@ -253,12 +253,9 @@ function toggleTheme(){ progress.theme = progress.theme === "dark" ? "" : "dark"
 /* ================= 数据源 ================= */
 let PORTAL_DATA = null;
 async function loadPortalData(){
-      const [a, b, c] = await Promise.all([fetch("data/index.json"), fetch("data/quizzes.json"), fetch("data/flashcards.json")]);
-      const idx = await a.json(); const qz = await b.json(); const fc = await c.json();
-      const docs = {};
-      const items = idx.groups.flatMap(g => g.items);
-      await Promise.all(items.map(async ([p]) => { const r = await fetch(encodeURI(p)); docs[p] = await r.text(); }));
-      return { groups: idx.groups, docs, levels: qz.levels, quizzes: qz.quizzes, passScore: qz.passScore || 80, flashcards: fc };
+      const r = await fetch("data/index.json");
+      if (!r.ok) throw new Error("HTTP " + r.status);
+      return await r.json();
     }
 async function ensureData(){ if (!PORTAL_DATA) PORTAL_DATA = await loadPortalData(); return PORTAL_DATA; }
 async function loadDocText(p){ const D = await ensureData(); return D.docs[p]; }
@@ -683,23 +680,33 @@ window.addEventListener("popstate", () => {
   if (p && byPath[p]) openDoc(p, false);
 });
 (async function init(){
-  loadProg();
-  applyTheme();
-  $("#free").checked = !!progress.free;
-  PORTAL_DATA = await ensureData();
-  LEVELS = PORTAL_DATA.levels;
-  QUIZZES = PORTAL_DATA.quizzes;
-  PASS_SCORE = PORTAL_DATA.passScore || 80;
-  FLASH = PORTAL_DATA.flashcards;
-  state.groups = PORTAL_DATA.groups;
-  state.groups.forEach(g => g.items.forEach(([p, t]) => {
-    byPath[p] = { path: p, title: t, group: g.name };
-    const base = p.split("/").pop().replace(/\.md$/, "");
-    if (!byBase[base]) byBase[base] = p;
-  }));
-  goMap();
-  const p = decodeURIComponent(location.hash.replace(/^#\//, ""));
-  if (p && byPath[p]) openDoc(p, false);
+  let booted = false;
+  const watch = setTimeout(() => {
+    if (!booted) $("#viewbox").innerHTML = `<div class="wrap"><div class="err" style="padding:24px"><b>加载超时</b><br>数据未能就绪——请刷新页面重试；若反复出现，请重新运行 启动学习门户.bat 重建离线包。</div></div>`;
+  }, 20000);
+  try {
+    loadProg();
+    applyTheme();
+    $("#free").checked = !!progress.free;
+    PORTAL_DATA = await ensureData();
+    LEVELS = PORTAL_DATA.levels;
+    QUIZZES = PORTAL_DATA.quizzes;
+    PASS_SCORE = PORTAL_DATA.passScore || 80;
+    FLASH = PORTAL_DATA.flashcards;
+    state.groups = PORTAL_DATA.groups;
+    state.groups.forEach(g => g.items.forEach(([p, t]) => {
+      byPath[p] = { path: p, title: t, group: g.name };
+      const base = p.split("/").pop().replace(/\.md$/, "");
+      if (!byBase[base]) byBase[base] = p;
+    }));
+    booted = true; clearTimeout(watch);
+    goMap();
+    const p = decodeURIComponent(location.hash.replace(/^#\//, ""));
+    if (p && byPath[p]) openDoc(p, false);
+  } catch (e) {
+    clearTimeout(watch);
+    $("#viewbox").innerHTML = `<div class="wrap"><div class="err" style="padding:24px"><b>启动失败：${e.message}</b><br>请刷新页面重试；若反复出现请重建离线包。</div></div>`;
+  }
 })();
 </script>
 </body>
