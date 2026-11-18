@@ -1,0 +1,706 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>OpsLab 闯关学习（离线版）</title>
+<style>
+:root{
+  --bg:#f2f5f9;--card:#ffffff;--soft:#eef2f7;--line:#e2e6ec;--ink:#1f2630;--muted:#68758a;
+  --acc:#3f7dff;--acc-soft:#e8f0ff;--ok:#1fa06a;--ok-soft:#e2f6ec;--warn:#d98f1f;--warn-soft:#fdf3e0;
+  --bad:#d9534f;--bad-soft:#fdecec;--gold:#c9973b;--gold-soft:#fdf6e4;--code-bg:#f0f3f7;--rail:#d7dee8;
+  --shadow:0 1px 3px #16233a14,0 8px 24px #16233a0d;
+}
+body.dark{
+  --bg:#0d1220;--card:#151c2b;--soft:#1d2536;--line:#28324a;--ink:#dde6f2;--muted:#8b96ab;
+  --acc:#5f97ff;--acc-soft:#1a2a4a;--ok:#2cbd80;--ok-soft:#122b1f;--warn:#eab24a;--warn-soft:#2d2413;
+  --bad:#e07070;--bad-soft:#2b1616;--gold:#e0b25a;--gold-soft:#2b2413;--code-bg:#101624;--rail:#2a3348;
+  --shadow:0 1px 3px #00000059,0 8px 24px #00000033;
+}
+*{box-sizing:border-box}
+body{margin:0;font-family:"Microsoft YaHei",system-ui,sans-serif;background:var(--bg);color:var(--ink);display:flex;height:100vh;overflow:hidden;transition:background .25s,color .25s}
+/* ---------- 侧栏 ---------- */
+#side{width:292px;min-width:212px;background:var(--card);border-right:1px solid var(--line);display:flex;flex-direction:column}
+#logo{padding:14px 16px 8px;border-bottom:1px solid var(--line)}
+#logo b{font-size:15px}
+#logo small{display:block;color:var(--muted);font-size:11px;margin-top:3px}
+#tabs{display:flex;flex-wrap:wrap;border-bottom:1px solid var(--line)}
+#tabs button{flex:1;border:none;background:none;padding:9px 2px;cursor:pointer;font-size:12px;color:var(--muted);white-space:nowrap;transition:.15s}
+#tabs button.on{color:var(--acc);font-weight:700;border-bottom:2px solid var(--acc);background:var(--acc-soft)}
+#search{margin:8px 10px;padding:7px 11px;border:1px solid var(--line);border-radius:8px;width:calc(100% - 20px);font-size:12.5px;background:var(--card);color:var(--ink);display:none}
+#tree{flex:1;overflow-y:auto;padding:4px 8px 16px}
+details{margin:2px 0}
+summary{cursor:pointer;padding:5px 8px;border-radius:7px;font-size:12.5px;font-weight:600;list-style:none;user-select:none}
+summary::before{content:"▸ ";color:var(--muted)}
+details[open]>summary::before{content:"▾ "}
+summary:hover{background:var(--soft)}
+ul.items{list-style:none;margin:2px 0 6px;padding:0 0 0 12px}
+ul.items li{margin:1px 0}
+ul.items a{display:block;padding:3px 9px;border-radius:7px;font-size:12px;color:var(--ink);text-decoration:none;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+ul.items a:hover{background:var(--soft);color:var(--acc)}
+ul.items a.cur{background:var(--acc);color:#fff}
+.pins{padding:7px 8px;border-bottom:1px solid var(--line)}
+.pins a{display:block;padding:6px 11px;margin:3px 0;border-radius:9px;background:var(--soft);font-size:12.5px;text-decoration:none;color:var(--ink)}
+.pins a:hover{background:var(--acc);color:#fff}
+.pins a.due{background:var(--warn-soft);color:#9a6a00;font-weight:700}
+/* ---------- 顶栏 ---------- */
+#main{flex:1;display:flex;flex-direction:column;min-width:0}
+#top{padding:12px 22px;background:var(--card);border-bottom:1px solid var(--line);display:flex;gap:14px;align-items:center;flex-wrap:wrap}
+#rank{background:linear-gradient(120deg,var(--acc),var(--ok));color:#fff;border-radius:10px;padding:5px 13px;font-size:12.5px;font-weight:700;box-shadow:var(--shadow)}
+.xpwrap{flex:1;min-width:170px}
+.xpbar{height:13px;background:var(--soft);border-radius:8px;overflow:hidden;position:relative}
+.xpbar>i{display:block;height:100%;background:linear-gradient(90deg,var(--acc),var(--ok));border-radius:8px;transition:width .6s ease}
+.xpbar span{position:absolute;right:8px;top:0;font-size:10px;line-height:13px;color:#fff;font-weight:700;text-shadow:0 1px 2px #0004}
+.xpwrap small{display:block;text-align:right;font-size:10.5px;color:var(--muted);margin-top:2px}
+.badge{background:var(--soft);border-radius:9px;padding:4px 11px;font-size:12px;color:var(--muted)}
+.iconbtn{border:1px solid var(--line);background:var(--card);color:var(--ink);border-radius:9px;padding:5px 10px;cursor:pointer;font-size:13px}
+.iconbtn:hover{background:var(--soft)}
+label.badge{cursor:pointer;user-select:none}
+label.badge input{vertical-align:-2px}
+#bar{padding:9px 22px;background:var(--card);border-bottom:1px solid var(--line);font-size:12px;color:var(--muted);display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+#bar b{color:var(--ink);font-size:13px}
+#bar .act{text-decoration:none;color:var(--acc);margin-left:auto}
+#view{flex:1;overflow-y:auto;padding:24px 0 70px;scroll-behavior:smooth}
+.wrap{max-width:940px;margin:0 auto;padding:0 26px}
+.viewin{animation:vin .35s ease}
+@keyframes vin{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+/* ---------- 关卡地图：路径式 ---------- */
+.phase{background:var(--card);border:1px solid var(--line);border-radius:14px;margin:0 0 20px;box-shadow:var(--shadow);overflow:hidden}
+.phase-h{display:flex;align-items:center;gap:13px;padding:16px 20px;flex-wrap:wrap}
+.phase-h .ic{width:44px;height:44px;border-radius:12px;background:var(--acc-soft);display:grid;place-items:center;font-size:23px}
+.phase-h b{font-size:16.5px}
+.phase-h .pbar{flex:1;min-width:110px;height:9px;background:var(--soft);border-radius:6px;overflow:hidden}
+.phase-h .pbar i{display:block;height:100%;background:linear-gradient(90deg,var(--acc),var(--ok));border-radius:6px;transition:width .6s}
+.phase-h .st{font-size:12px;color:var(--muted);white-space:nowrap}
+.path{position:relative;padding:4px 20px 16px 46px}
+.path::before{content:"";position:absolute;left:63px;top:18px;bottom:18px;width:2px;background:var(--rail)}
+.step{position:relative;display:flex;align-items:center;gap:13px;background:var(--card);border:1px solid var(--line);border-radius:12px;padding:11px 15px;margin:0 0 12px;cursor:pointer;transition:.15s;box-shadow:var(--shadow)}
+.step:hover{border-color:var(--acc);transform:translateX(4px)}
+.step .dot{position:absolute;left:-38px;width:32px;height:32px;border-radius:50%;display:grid;place-items:center;font-size:14px;font-weight:700;background:var(--card);border:2px solid var(--rail);color:var(--muted);z-index:1}
+.step.done .dot{background:var(--ok);border-color:var(--ok);color:#fff}
+.step.current .dot{background:var(--acc);border-color:var(--acc);color:#fff;box-shadow:0 0 0 4px var(--acc-soft)}
+.step.lock{opacity:.5;cursor:not-allowed}
+.step.done{border-color:var(--ok)}
+.step.current{border-color:var(--acc)}
+.step .body{flex:1;min-width:0}
+.step .body b{display:block;font-size:14px}
+.step .body small{color:var(--muted);font-size:11.5px}
+.step .go{font-size:12px;color:var(--acc);white-space:nowrap}
+.step.lock .go{display:none}
+.bosscard{position:relative;background:linear-gradient(135deg,var(--gold-soft),var(--card));border:2px dashed var(--gold);border-radius:12px;padding:13px 16px;margin:0 0 12px 46px;cursor:pointer;transition:.15s}
+.bosscard:hover{transform:translateX(4px)}
+.bosscard.done{border-style:solid;opacity:.85}
+.bosscard b{font-size:14px}
+.bosscard small{display:block;color:var(--muted);font-size:11.5px;margin-top:3px}
+.bosscard .bic{position:absolute;right:14px;top:12px;font-size:22px}
+/* ---------- 阅读文章 ---------- */
+.article{max-width:900px;margin:0 auto;padding:30px 38px 64px;background:var(--card);border:1px solid var(--line);border-radius:14px;box-shadow:var(--shadow)}
+.article h1{font-size:26px;border-bottom:2px solid var(--line);padding-bottom:12px;margin:0 0 20px;line-height:1.4}
+.article h2{font-size:20px;border-bottom:1px solid var(--line);padding-bottom:7px;margin:1.7em 0 .8em}
+.article h3{font-size:17px;margin:1.4em 0 .5em}
+.article,.article p,.article li{line-height:1.85}
+.article p{margin:.9em 0;text-align:justify}
+.article ul,.article ol{padding-left:1.6em}
+.article li{margin:.3em 0}
+.article code{background:var(--code-bg);border-radius:5px;padding:2px 7px;font-family:Consolas,monospace;font-size:.9em}
+.article pre{background:var(--code-bg);border:1px solid var(--line);border-radius:10px;padding:15px 17px;overflow-x:auto;position:relative;margin:1.1em 0}
+.article pre code{background:none;border:none;padding:0;font-size:13px;line-height:1.65;color:var(--ink)}
+.article table{border-collapse:collapse;width:100%;margin:1.1em 0;font-size:14px}
+.article th,.article td{border:1px solid var(--line);padding:7px 11px;text-align:left}
+.article th{background:var(--soft)}
+.article blockquote{border-left:3px solid var(--acc);margin:1em 0;padding:.4em 1.2em;background:var(--acc-soft);border-radius:0 10px 10px 0}
+.article img{max-width:100%}
+.article a{color:var(--acc)}
+.meta{display:flex;gap:8px;flex-wrap:wrap;margin:0 0 18px}
+.meta span{background:var(--soft);border-radius:7px;padding:3px 11px;font-size:12px;color:var(--muted)}
+.meta a{color:var(--acc);text-decoration:none}
+/* ---------- 测验 ---------- */
+#quiz{margin-top:38px;background:var(--acc-soft);border:2px solid var(--acc);border-radius:14px;padding:22px 26px}
+#quiz h3{margin:0 0 4px;color:var(--acc);font-size:17px}
+#quiz .qhint{font-size:12.5px;color:var(--muted);margin:0 0 4px}
+.qq{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:15px 19px;margin:13px 0}
+.qq p.q{margin:0 0 10px;font-weight:600;line-height:1.6}
+.qq label{display:block;padding:7px 12px;border-radius:8px;cursor:pointer;font-size:14px;border:1px solid transparent;transition:.12s}
+.qq label:hover{background:var(--soft)}
+.qq label.ok{background:var(--ok-soft);color:var(--ok);border-color:var(--ok);font-weight:700}
+.qq label.no{background:var(--bad-soft);color:var(--bad);border-color:var(--bad)}
+.qq .why{display:none;font-size:12.5px;color:var(--muted);margin-top:10px;border-top:1px dashed var(--line);padding-top:8px;line-height:1.6}
+.qq.done .why{display:block}
+#qres{margin-top:15px;font-weight:700;font-size:15px}
+/* ---------- BOSS ---------- */
+#quiz.bossq{background:var(--gold-soft);border-color:var(--gold)}
+#quiz.bossq h3{color:var(--gold)}
+/* ---------- 闪卡 ---------- */
+.flash{max-width:580px;margin:0 auto;text-align:center}
+.fcard{perspective:1400px;min-height:250px}
+.finner{position:relative;min-height:250px;transition:transform .55s cubic-bezier(.4,.2,.2,1);transform-style:preserve-3d;cursor:pointer}
+.fcard.open .finner{transform:rotateY(180deg)}
+.fface{position:absolute;inset:0;backface-visibility:hidden;-webkit-backface-visibility:hidden;border-radius:18px;display:flex;flex-direction:column;justify-content:center;padding:36px;box-shadow:var(--shadow)}
+.ffront{background:var(--card);border:2px solid var(--acc)}
+.ffront .cmd{font-size:28px;font-weight:700;font-family:Consolas,monospace;color:var(--acc)}
+.ffront .tip{font-size:12px;color:var(--muted);margin-top:16px}
+.fback{background:var(--acc);color:#fff;transform:rotateY(180deg);font-size:16.5px;line-height:1.75}
+.fback .cmd2{font-family:Consolas,monospace;font-weight:700;font-size:18px;margin-bottom:10px}
+.fops{display:flex;gap:12px;justify-content:center;margin-top:24px}
+.fstat{font-size:13px;color:var(--muted);margin-bottom:16px}
+/* ---------- 表单（简历） ---------- */
+textarea.f{width:100%;min-height:90px;border:1px solid var(--line);border-radius:9px;padding:10px;font-family:inherit;font-size:13.5px;line-height:1.6;background:var(--card);color:var(--ink)}
+input.f{width:100%;padding:9px 11px;border:1px solid var(--line);border-radius:9px;font-size:14px;background:var(--card);color:var(--ink)}
+.fblock{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:18px 22px;margin:16px 0;box-shadow:var(--shadow)}
+.fblock h3{margin:0 0 12px}
+#resout{background:var(--code-bg);border:1px solid var(--line);color:var(--ink);border-radius:10px;padding:15px;font-family:Consolas,monospace;font-size:12.5px;white-space:pre-wrap;line-height:1.65;margin-top:12px;max-height:440px;overflow:auto}
+.jdres{display:flex;gap:20px;flex-wrap:wrap}
+.jdres>div{flex:1;min-width:260px}
+.jdres .mtag{display:inline-block;background:var(--ok-soft);color:var(--ok);border-radius:6px;padding:2px 9px;margin:2px 3px;font-size:12.5px}
+.jdres .mtag.no{background:var(--bad-soft);color:var(--bad)}
+/* ---------- 通用 ---------- */
+.planbox{background:var(--card);border:1px solid var(--line);border-radius:14px;margin:0 0 20px;padding:17px 22px;font-size:13.5px;box-shadow:var(--shadow)}
+.planbox .row{display:flex;gap:9px;align-items:center;flex-wrap:wrap;margin:7px 0}
+.planbox b{font-size:14px}
+.heat{display:flex;gap:3px;flex-wrap:wrap;margin-top:12px}
+.heat i{width:12px;height:12px;border-radius:3px;background:var(--soft);display:inline-block}
+.heat i.h1{background:#b9dcff}.heat i.h2{background:#6db1ff}.heat i.h3{background:#2f6fd8}
+body.dark .heat i.h1{background:#2a4a7a}body.dark .heat i.h2{background:#3a6ab8}body.dark .heat i.h3{background:#5b9dff}
+.heat i.today{outline:2px solid var(--gold)}
+.tag{border-radius:7px;padding:2px 9px;font-size:12px;font-weight:700}
+.tag.ok{background:var(--ok-soft);color:var(--ok)}
+.tag.late{background:var(--warn-soft);color:#9a6a00}
+.tag.na{background:var(--soft);color:var(--muted)}
+.hr{border:none;border-top:1px solid var(--line);margin:1.6em 0}
+#load{position:fixed;inset:0;display:none;place-items:center;background:#0003;z-index:99;font-size:14px;backdrop-filter:blur(2px)}
+@media(max-width:900px){#side{display:none}}
+</style>
+</head>
+<body>
+<nav id="side">
+  <div id="logo"><a id="title" href="#" onclick="goMap();return false">🎮 OpsLab 运维学习闯关</a><small>离线版 · 41 关 · 无需网络</small></div>
+  <div id="tabs">
+    <button id="tab-map" class="on" onclick="goMap()">🗺 地图</button>
+    <button id="tab-lib" onclick="goLib()">📚 资料库</button>
+    <button id="tab-rev" onclick="goReview()">🔁 复习</button>
+    <button id="tab-flash" onclick="goFlash()">🃏 闪卡</button>
+    <button id="tab-car" onclick="goCareer()">✍ 简历&JD</button>
+  </div>
+  <input id="search" placeholder="搜索资料标题 / 路径…" style="display:none">
+  <div class="pins">
+    <a href="#/README.md" data-open>🎓 课程总目录</a>
+    <a href="#/learn-plan.md" data-open>🗺 学习路线总览</a>
+    <a href="#/resources.md" data-open>📚 资料清单</a>
+    <a href="https://github.com/Sakura4056/opslab-lessons" target="_blank">⭐ GitHub 仓库</a>
+  </div>
+  <div id="tree"></div>
+</nav>
+<main id="main">
+  <div id="top">
+    <span id="rank" class="rank">🌱 新兵</span>
+    <div class="xpwrap">
+      <div class="xpbar"><i id="xpfill" style="width:0%"></i><span id="xptext">0 XP</span></div>
+      <small id="xpsub">0 / 5500 XP · 距下一称号 500</small>
+    </div>
+    <span class="badge" id="prog">总进度 0/41</span>
+    <span class="badge" id="planbadge">📅 —</span>
+    <button class="iconbtn" id="themeToggle" onclick="toggleTheme()" title="切换深浅色">🌙</button>
+    <label class="badge" style="cursor:pointer"><input type="checkbox" id="free"> 自由模式</label>
+    <button class="iconbtn" onclick="resetProgress()" title="清空进度">↺</button>
+  </div>
+  <div id="bar"><span id="crumb">🗺 关卡地图</span><a class="act" id="rawlink" target="_blank" href="#">查看原始文件</a></div>
+  <div id="view"><div class="wrap" id="viewbox">加载中…</div></div>
+</main>
+<div id="load">加载中…</div>
+<script></script>
+<script>
+/* ================= 内嵌数据（构建时注入） ================= */
+/* ================= 安全存储 ================= */
+const store = (() => {
+  try { localStorage.setItem("__t", "1"); localStorage.removeItem("__t"); return localStorage; }
+  catch (e) {
+    const mem = {};
+    return { getItem: k => (k in mem ? mem[k] : null), setItem: (k, v) => { mem[k] = String(v); }, removeItem: k => { delete mem[k]; } };
+  }
+})();
+
+/* ================= 常量与状态 ================= */
+let LEVELS = [], QUIZZES = {}, PASS_SCORE = 80;
+const PHASES = {0:["🛠","序章 · 环境搭建"],1:["🐧","第 1 章 · Linux 基础"],2:["🌐","第 2 章 · 网络基础"],3:["📜","第 3 章 · Shell 脚本"],4:["🏛","第 4 章 · 服务实战"],5:["🐳","第 5 章 · 容器与自动化"],6:["🎯","第 6 章 · 求职冲刺"]};
+const RANKS = [[0,"🌱 新兵"],[500,"🎖 见习运维"],[1200,"🛡 正式运维"],[2200,"⚔ 高级学徒"],[3200,"🏅 准运维工程师"],[4300,"🎓 毕业冲刺"]];
+const $ = s => document.querySelector(s);
+const byPath = {}, byBase = {};
+let FLASH = [], state = {cur:null, lib:false, view:"map"}, progress;
+const save_ = () => store.setItem(SAVE_KEY, JSON.stringify(progress));
+function loadProg(){ try { progress = Object.assign({done:{}, free:false, wrong:[], flash:{}, resume:{}, theme:""}, JSON.parse(store.getItem(SAVE_KEY) || "{}")); } catch (e) { progress = {done:{}, free:false, wrong:[], flash:{}, resume:{}, theme:""}; } if(!progress.wrong) progress.wrong=[]; if(!progress.flash) progress.flash={}; if(!progress.resume) progress.resume={}; if(!progress.theme) progress.theme=""; }
+const xpOf = () => Object.keys(progress.done).reduce((s,k)=> s + (k.includes("测试卷")?200:100), 0);
+function rankOf(xp){ let r = RANKS[0][1]; for(const [m,n] of RANKS) if(xp>=m) r=n; return r; }
+function nextRankGap(xp){ for(const [m,n] of RANKS) if(xp < m) return m - xp; return 0; }
+function phaseStat(ph){ const ls = LEVELS.filter(l=>l.phase===ph); return {d: ls.filter(l=>progress.done[l.path]).length, t: ls.length}; }
+function totalDone(){ return LEVELS.filter(l=>progress.done[l.path]).length; }
+function unlocked(i){ return progress.free || i===0 || !!progress.done[LEVELS[i-1].path]; }
+function today(){ return new Date().toISOString().slice(0,10); }
+function planPhase(){ const t = today(); for(const p of PLAN) if (t >= p.s && t <= p.e) return p; return null; }
+const PLAN = [
+  {p:0, s:"2026-11-09", e:"2026-11-15"},
+  {p:1, s:"2026-11-16", e:"2026-12-27"},
+  {p:2, s:"2026-12-28", e:"2027-01-31"},
+  {p:3, s:"2027-02-01", e:"2027-02-28"},
+  {p:4, s:"2027-03-01", e:"2027-04-25"},
+  {p:5, s:"2027-04-26", e:"2027-05-31"},
+  {p:6, s:"2027-06-01", e:"2027-07-04"}
+];
+
+/* ================= 主题 ================= */
+function applyTheme(){ document.body.classList.toggle("dark", progress.theme === "dark"); $("#themeToggle").textContent = progress.theme === "dark" ? "☀️" : "🌙"; }
+function toggleTheme(){ progress.theme = progress.theme === "dark" ? "" : "dark"; save_(); applyTheme(); }
+
+/* ================= 数据源 ================= */
+let PORTAL_DATA = null;
+async function loadPortalData(){
+      const [a, b, c] = await Promise.all([fetch("data/index.json"), fetch("data/quizzes.json"), fetch("data/flashcards.json")]);
+      const idx = await a.json(); const qz = await b.json(); const fc = await c.json();
+      const docs = {};
+      const items = idx.groups.flatMap(g => g.items);
+      await Promise.all(items.map(async ([p]) => { const r = await fetch(encodeURI(p)); docs[p] = await r.text(); }));
+      return { groups: idx.groups, docs, levels: qz.levels, quizzes: qz.quizzes, passScore: qz.passScore || 80, flashcards: fc };
+    }
+async function ensureData(){ if (!PORTAL_DATA) PORTAL_DATA = await loadPortalData(); return PORTAL_DATA; }
+async function loadDocText(p){ const D = await ensureData(); return D.docs[p]; }
+
+/* ================= 视图路由 ================= */
+function show(v){ state.view = v; ["map","lib","rev","flash","car"].forEach(x => { const t = $("#tab-" + x); if (t) t.classList.toggle("on", x === v); }); }
+function goMap(){ show("map"); renderMap(); $("#crumb").textContent = "🗺 关卡地图 — 点击关卡进入学习"; $("#viewbox").innerHTML = ""; renderMap(); }
+function goLib(){ show("lib"); buildLibTree(); renderLib($("#search").value); $("#crumb").textContent = "📚 资料库 — 自由浏览"; $("#viewbox").innerHTML = `<div class="wrap viewin"><div class="article" style="padding:40px;text-align:center;color:var(--muted)">← 从左侧选择一篇资料开始阅读</div></div>`; }
+function goReview(){ show("rev"); $("#crumb").textContent = "🔁 错题复习"; $("#viewbox").innerHTML = `<div class="wrap" id="revbox"></div>`; renderReview(); }
+function goFlash(){ show("flash"); $("#crumb").textContent = "🃏 命令闪卡 Top50"; $("#viewbox").innerHTML = `<div class="wrap" id="flashbox"></div>`; renderFlash(); }
+function goCareer(){ show("car"); $("#crumb").textContent = "✍ 简历生成器 & JD 分析"; $("#viewbox").innerHTML = `<div class="wrap" id="carbox"></div>`; renderCareer(); }
+function openLevel(i) { openDoc(LEVELS[i].path); }
+function alertMsg(m) { alert(m); }
+
+/* ================= 关卡地图（路径式） ================= */
+function renderMap(){
+  const xp = xpOf(), done = totalDone();
+  $("#rank").textContent = rankOf(xp);
+  $("#xpfill").style.width = Math.min(100, Math.round(xp/5500*100)) + "%";
+  $("#xptext").textContent = xp + " XP";
+  $("#xpsub").textContent = xp + " / 5500 XP · 距下一称号还差 " + nextRankGap(xp) + " XP";
+  $("#prog").textContent = "总进度 " + done + "/" + LEVELS.length;
+  $("#planbadge").textContent = planPhase() ? "📅 计划进行中：阶段 " + planPhase().p : "📅 计划休整期";
+  let html = `<div class="wrap viewin">`;
+  html += planBoxHTML();
+  if (done === LEVELS.length) html += `<div class="phase"><div class="phase-h"><span class="ic">🏆</span><b>毕业！全部 ${LEVELS.length} 关通关</b><span class="st">带着资料库出发 🚀</span></div></div>`;
+  Object.keys(PHASES).forEach(ph => {
+    const [ic, name] = PHASES[ph];
+    const ps = phaseStat(ph);
+    html += `<div class="phase"><div class="phase-h"><span class="ic">${ic}</span><b>${name}</b>
+      <div class="pbar"><i style="width:${ps.t?Math.round(ps.d/ps.t*100):0}%"></i></div>
+      <span class="st">${ps.d}/${ps.t}</span></div><div class="path">`;
+    LEVELS.forEach((l, i) => {
+      if (l.phase !== +ph) return;
+      const dn = !!progress.done[l.path], ul = unlocked(i);
+      const q = QUIZZES[l.path];
+      const stCls = dn ? "done" : (ul ? (i === firstUndone(ph) ? "current" : "") : "lock");
+      const it = byPath[l.path];
+      const title = (it && it.title) || l.path.split("/").pop();
+      const num = title.match(/^第?.{0,3}章|^(\d+)\./);
+      const dotTxt = dn ? "✓" : (ul ? "▶" : "🔒");
+      const sub = l.kind === "boss" ? "BOSS · 阶段测试卷 · +200 XP" : (q ? "测验 " + q.questions.length + " 题 · +100 XP" : "");
+      if (l.kind === "boss") {
+        html += `<div class="bosscard ${dn ? "done" : ""}" onclick="${ul ? `openLevel(${i})` : `alertMsg('先完成前面的关卡，或开启自由模式')`}">
+          <b>🎯 BOSS · ${title}</b><small>${dn ? "✅ 已通关" : sub}</small><span class="bic">${dn ? "🏆" : "⚔"}</span></div>`;
+      } else {
+        html += `<div class="step ${stCls}" onclick="${ul ? `openLevel(${i})` : `alertMsg('先完成前面的关卡，或开启自由模式')`}">
+          <div class="dot">${dotTxt}</div>
+          <div class="body"><b>${title}</b><small>${dn ? "✅ 已通关" : sub}</small></div>
+          ${ul ? `<span class="go">进入 →</span>` : ""}
+        </div>`;
+      }
+    });
+    html += `</div></div>`;
+  });
+  html += `<div class="planbox" id="heatbox"></div>`;
+  html += `<p style="color:var(--muted);font-size:12px;text-align:center">闯关规则：按顺序解锁 → 学完讲义 → 通过小测验 → BOSS 关（测试卷自评 ≥${PASS_SCORE} 分）。资料库随时自由查阅。</p></div>`;
+  $("#viewbox").innerHTML = html;
+  renderHeat();
+}
+function firstUndone(ph){ const ls = LEVELS.map((l,i)=>({l,i})).filter(x=>x.l.phase===+ph && !progress.done[x.l.path]); return ls.length ? ls[0].i : -1; }
+function planBoxHTML(){
+  const t = today();
+  const cur = planPhase();
+  const rows = PLAN.map(p => {
+    const ps = phaseStat(p.p);
+    const inRange = t >= p.s && t <= p.e;
+    const passed = t > p.e;
+    let tag, cls;
+    if (inRange) { const ok = ps.d === ps.t; tag = ok ? "✅ 本期已全部通关" : "进行中 · 已完成 " + ps.d + "/" + ps.t; cls = ok ? "ok" : "na"; }
+    else if (passed) { tag = ps.d === ps.t ? "✅ 已通关" : "⚠ 已过期未完成 " + ps.d + "/" + ps.t; cls = ps.d === ps.t ? "ok" : "late"; }
+    else { tag = "未开始"; cls = "na"; }
+    return `<div class="row"><span class="tag ${cls}">${tag}</span> <b>${PHASES[p.p][1]}</b> <span style="color:var(--muted)">${p.s} ~ ${p.e}</span></div>`;
+  }).join("");
+  return `<div class="row" style="margin-top:0"><b>📅 学习计划对照</b><span class="tag na">今天 ${t}</span></div>${rows}`;
+}
+function renderHeat(){
+  const box = document.getElementById("heatbox"); if (!box) return;
+  const counts = {};
+  Object.values(progress.done).forEach(v => { const d = new Date(v.ts).toISOString().slice(0,10); counts[d] = (counts[d]||0)+1; });
+  const days = []; const now = new Date();
+  for (let i = 179; i >= 0; i--) days.push(new Date(now - i*86400000).toISOString().slice(0,10));
+  let cells = "";
+  days.forEach(d => { const c = counts[d]||0; const lv = c===0?0:(c<=1?1:(c<=3?2:3)); cells += `<i class="${["","h1","h2","h3"][lv]}${d===today()?" today":""}" title="${d}: ${c} 关"></i>`; });
+  box.innerHTML = `<b>📅 学习热力图（近 180 天）</b><div class="heat">${cells}</div>
+    <div style="font-size:12px;color:var(--muted);margin-top:8px">每天完成任意关卡即可点亮一格——坚持比强度更重要。</div>`;
+}
+
+/* ================= 错题本 + 复习 ================= */
+function addWrong(path, qi){
+  const key = path + "#" + qi;
+  const ex = progress.wrong.find(w => w.k === key);
+  if (ex) { ex.w += 1; ex.due = Date.now() + 86400000; }
+  else progress.wrong.push({k: key, qi, w: 1, due: Date.now() + 86400000});
+  save_();
+}
+function resolveWrong(path, qi){
+  const key = path + "#" + qi;
+  progress.wrong = progress.wrong.filter(w => w.k !== key);
+  save_();
+}
+function resolveAllWrong(path){
+  progress.wrong = progress.wrong.filter(w => w.k.split("#")[0] !== path);
+  save_();
+}
+function dueWrong(){ return progress.wrong.filter(w => w.due <= Date.now()); }
+function renderReview(){
+  const box = document.getElementById("revbox");
+  const due = dueWrong();
+  if (!progress.wrong.length) { box.innerHTML = `<div class="wrap viewin"><div class="article" style="padding:40px;text-align:center;color:var(--muted)">🎉 错题本是空的——保持这个状态！<br><br>测验中答错的题会自动进入这里，按间隔推送复习。</div></div>`; return; }
+  if (!due.length) { box.innerHTML = `<div class="wrap viewin"><div class="article" style="padding:40px;text-align:center;color:var(--muted)">📌 错题本共 ${progress.wrong.length} 题，今日到期的已全部复习完。<br>下一批到期：${new Date(Math.min(...progress.wrong.map(w=>w.due))).toLocaleString()}</div></div>`; return; }
+  const w = due[0];
+  const qz = QUIZZES[w.k.split("#")[0]];
+  const q = qz && qz.questions[w.qi];
+  if (!q) { resolveWrong(w.k, w.qi); renderReview(); return; }
+  box.innerHTML = `<div class="wrap viewin"><div class="article" style="max-width:760px">
+    <h2 style="border:none">🔁 复习（今日到期 ${due.length} 题）</h2>
+    <div class="qq"><p class="q">${q.q}</p>
+      ${q.opts.map((o,j)=>`<label><input type="radio" name="rw" value="${j}"> ${String.fromCharCode(65+j)}. ${o}</label>`).join("")}
+      <div class="why">💡 ${q.why}</div></div>
+    <button class="btn" onclick="answerReview('${w.k}', ${w.qi}, ${q.a})">提交</button>
+  </div></div>`;
+}
+function answerReview(key, qi, ans){
+  const box = document.querySelector("#revbox .qq");
+  const sel = box.querySelector("input:checked");
+  const ok = sel && +sel.value === ans;
+  box.querySelectorAll("label").forEach((lb,j)=>{ if (j===ans) lb.classList.add("ok"); else if (sel && j === +sel.value) lb.classList.add("no"); });
+  box.classList.add("done");
+  const w = progress.wrong.find(x => x.k === key);
+  if (ok) { if (w) { w.w -= 1; w.due = Date.now() + (w.w > 0 ? 86400000*3 : 86400000*7); if (w.w <= 0) progress.wrong = progress.wrong.filter(x=>x!==w); } }
+  else { if (w) { w.w += 1; w.due = Date.now() + 86400000; } }
+  save_();
+  const btn = box.parentElement.querySelector(".btn");
+  if (btn) { btn.textContent = "下一题 →"; btn.onclick = () => renderReview(); }
+}
+
+/* ================= 命令闪卡（3D 翻面） ================= */
+let fstate = {i:0};
+function renderFlash(){
+  const box = document.getElementById("flashbox");
+  if (!FLASH.length) { box.innerHTML = `<div class="wrap viewin"><div class="article" style="text-align:center;padding:30px">闪卡数据缺失（请重新运行 启动学习门户.bat 重建）</div></div>`; return; }
+  if (fstate.i >= FLASH.length) fstate.i = 0;
+  const c = FLASH[fstate.i];
+  const known = progress.flash[c.f] ? "✅ 已记住" : "";
+  box.innerHTML = `<div class="flash viewin">
+    <div class="fstat">第 ${fstate.i+1} / ${FLASH.length} 张 ｜ ${known} ｜ 点击卡片翻面看释义</div>
+    <div class="fcard" onclick="this.classList.toggle('open')">
+      <div class="finner">
+        <div class="fface ffront"><div class="cmd">$ ${c.f}</div><div class="tip">想一想它的作用，再点击翻面</div></div>
+        <div class="fface fback"><div class="cmd2">$ ${c.f}</div>${c.b}</div>
+      </div>
+    </div>
+    <div class="fops">
+      <button class="btn ghost" onclick="flashMove(-1)">← 上一张</button>
+      <button class="btn ghost" onclick="flashMark(false)">😮 还不熟</button>
+      <button class="btn" onclick="flashMark(true)">✅ 已记住</button>
+      <button class="btn ghost" onclick="flashMove(1)">下一张 →</button>
+    </div>
+    <p style="font-size:12px;color:var(--muted)">「还不熟」的卡片会重点循环出现；状态自动保存在浏览器。</p>
+  </div>`;
+}
+function flashMove(d){ fstate.i = (fstate.i + d + FLASH.length) % FLASH.length; renderFlash(); }
+function flashMark(known){
+  const c = FLASH[fstate.i];
+  if (known) progress.flash[c.f] = Date.now(); else delete progress.flash[c.f];
+  save_(); flashMove(1);
+}
+
+/* ================= 简历生成器 & JD 分析 ================= */
+const SKILLS = [
+  ["Linux", ["linux","centos","ubuntu"]], ["Shell 脚本", ["shell","bash"]],
+  ["Python", ["python"]], ["Docker", ["docker","容器"]],
+  ["Kubernetes/K8s", ["k8s","kubernetes","容器编排"]], ["Nginx", ["nginx"]],
+  ["MySQL", ["mysql"]], ["Redis", ["redis"]],
+  ["Prometheus/Grafana", ["prometheus","grafana","监控"]], ["ELK/EFK", ["elk","efk","elasticsearch","kibana","日志系统"]],
+  ["CI/CD", ["ci/cd","持续集成","持续部署","jenkins","github actions","gitlab ci"]],
+  ["Git", ["git"]], ["Ansible", ["ansible"]],
+  ["TCP/IP 网络基础", ["tcp","网络","osi","dns"]], ["安全加固", ["安全","加固","防火墙","等保"]],
+  ["云计算", ["阿里云","腾讯云","aws","云平台","云计算"]], ["虚拟化", ["虚拟化","kvm","vsphere"]],
+  ["故障排查", ["故障","排障","排查"]], ["Tomcat/JVM", ["tomcat","jvm"]]
+];
+function renderCareer(){
+  const box = document.getElementById("carbox");
+  const dr = progress.resume || {};
+  box.innerHTML = `<div class="wrap viewin">
+  <div class="fblock"><h3>① 基本信息与技能</h3>
+    <p><input class="f" id="rName" placeholder="姓名" value="${dr.name||""}"></p>
+    <p><input class="f" id="rCity" placeholder="城市 + 一句话意向（如：合肥 · 求职初级运维工程师）" value="${dr.city||""}"></p>
+    <p><b>技能清单（每行一条：技能 + 佐证描述）</b></p>
+    <textarea class="f" id="rSkills" rows="6">${dr.skills || "熟练 Linux 系统管理（用户/权限/进程/日志），可独立完成生产巡检与故障定位\n熟悉 Shell 脚本编写（巡检/备份/日志分析自动化），掌握 cron 定时任务\n熟悉 Docker 容器技术与 Dockerfile/Compose 编排，了解 Kubernetes 基本概念\n熟悉 Nginx 配置（虚拟主机/反向代理/HTTPS），MySQL 日常运维与备份恢复\n了解 Redis 缓存与持久化、Prometheus+Grafana 监控体系与 CI/CD 流程\n熟悉 Git 版本管理与 Ansible 批量配置管理"}</textarea></div>
+  <div class="fblock"><h3>② 项目经历（STAR）</h3>
+    <p><b>项目①：LNMP 环境部署与日常运维方案</b></p>
+    <textarea class="f" id="rP1" rows="5">${dr.p1 || "Nginx 反向代理 + systemd 托管 gunicorn 应用，实现 HTTP→HTTPS 强制跳转\n编写参数化备份脚本（mysqldump --single-transaction + 按天清理），完成恢复演练\n建立安全基线（ufw 最小暴露面 / SSH 密钥登录 / 服务自动拉起巡检）\n全流程文档化并 git tag 版本化管理，环境 1 小时内可从零重建"}</textarea>
+    <p><b>项目②：LNMP 容器化改造</b></p>
+    <textarea class="f" id="rP2" rows="5">${dr.p2 || "Dockerfile 分层优化（依赖层前置），构建 Flask 应用镜像\ndocker compose 编排 nginx/app/mysql/redis 四服务，一条命令拉起全套\n固定镜像版本 + 数据卷持久化，部署时间由 1 小时缩短至 10 分钟"}</textarea></div>
+  <div class="fblock"><h3>③ 生成与导出</h3>
+    <button class="btn" onclick="buildResume()">生成 Markdown 简历</button>
+    <button class="btn ghost" onclick="saveResumeDraft()">保存草稿</button>
+    <button class="btn ghost" id="dlbtn" style="display:none" onclick="downloadResume()">下载 简历.md</button>
+    <div id="resout" style="display:none"></div></div>
+  <div class="fblock"><h3>④ JD 匹配分析器</h3>
+    <p><b>粘贴招聘 JD，自动对照你的技能清单：</b></p>
+    <textarea class="f" id="jdText" rows="6" placeholder="把招聘网站上的岗位描述粘贴到这里…"></textarea>
+    <p><button class="btn" onclick="analyzeJD()">分析匹配度</button></p>
+    <div id="jdres"></div></div></div>`;
+  ["rName","rCity","rSkills","rP1","rP2"].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.addEventListener("input", saveResumeDraft);
+  });
+}
+function resumeMD(){
+  const name = $("#rName").value.trim() || "（姓名）";
+  const city = $("#rCity").value.trim() || "（城市 · 意向）";
+  const skills = $("#rSkills").value.split("\n").filter(x=>x.trim()).map(x=>"- " + x.trim()).join("\n");
+  const p1 = $("#rP1").value.split("\n").filter(x=>x.trim()).map(x=>"- " + x.trim()).join("\n");
+  const p2 = $("#rP2").value.split("\n").filter(x=>x.trim()).map(x=>"- " + x.trim()).join("\n");
+  return "# " + name + " — 初级运维工程师\n\n" + city + "\n\n## 专业技能\n\n" + skills +
+    "\n\n## 项目经历\n\n### 项目①：LNMP 环境部署与日常运维方案\n\n" + p1 +
+    "\n\n### 项目②：LNMP 容器化改造\n\n" + p2 + "\n\n## 其他\n\n- 证书/加分项：（软考 / 阿里云 ACP 等，按实际填写）\n- 学习习惯：坚持每日实验记录与复盘，个人资料库含 1000+ 篇整理笔记（可展示）\n";
+}
+function buildResume(){ const md = resumeMD(); const out = document.getElementById("resout"); out.style.display = "block"; out.textContent = md; document.getElementById("dlbtn").style.display = "inline-block"; }
+function downloadResume(){ const md = resumeMD(); const b = new Blob([md], {type:"text/markdown"}); const a = document.createElement("a"); a.href = URL.createObjectURL(b); a.download = "我的简历.md"; a.click(); }
+function saveResumeDraft(){
+  progress.resume = { name: $("#rName").value, city: $("#rCity").value, skills: $("#rSkills").value, p1: $("#rP1").value, p2: $("#rP2").value };
+  save_();
+}
+function analyzeJD(){
+  const jd = document.getElementById("jdText").value.toLowerCase();
+  const res = document.getElementById("jdres");
+  if (!jd.trim()) { res.innerHTML = `<div class="err">请先粘贴 JD 文本</div>`; return; }
+  const matched = [], missing = [];
+  SKILLS.forEach(([name, keys]) => {
+    const hit = keys.some(k => jd.includes(k.toLowerCase()));
+    (hit ? matched : missing).push(name);
+  });
+  const pct = Math.round(matched.length / SKILLS.length * 100);
+  const advice = pct >= 70 ? "匹配度较高：重点准备项目讲述与八股，可直接投递。" :
+                 pct >= 45 ? "匹配度中等：优先补缺失关键词对应的讲义，简历按 JD 调整措辞。" :
+                 "匹配度偏低：该岗位可能偏云平台/中高级方向，建议对照缺口补课后投递同类初级岗。";
+  res.innerHTML = `<div class="jdres">
+    <div><b>✅ 已具备（${matched.length}/${SKILLS.length}，匹配度 ${pct}%）</b><br>${matched.map(x=>`<span class="mtag">${x}</span>`).join("") || "无"}</div>
+    <div><b>❌ 缺口（对照讲义补齐）</b><br>${missing.map(x=>`<span class="mtag no">${x}</span>`).join("") || "无"}</div>
+  </div><p style="color:var(--muted);font-size:13px">${advice}</p>`;
+}
+
+/* ================= 文档打开 ================= */
+function splitFM(text) {
+  if (!text.startsWith("---")) return { meta: {}, body: text };
+  const m = text.match(/^---\r?\n([\s\S]*?)\r?\n---\r?\n?/);
+  if (!m) return { meta: {}, body: text };
+  const meta = {};
+  m[1].split(/\r?\n/).forEach(l => { const i = l.indexOf(":"); if (i > 0) meta[l.slice(0, i).trim()] = l.slice(i + 1).trim(); });
+  return { meta, body: text.slice(m[0].length) };
+}
+function preprocess(md) {
+  md = md.replace(/\[\[([^\]|#]+)(#[^\]|]+)?(?:\|([^\]]+))?\]\]/g, (m, tgt, _h, disp) => {
+    const p = byBase[tgt.trim()]; const d = (disp || tgt).trim();
+    return p ? `[${d}](#/${encodeURI(p)})` : `<span class="wl-miss" title="库内未收录：${tgt.trim()}">${d}</span>`;
+  });
+  md = md.replace(/\[([^\]]+)\]\(([^)#\s]+\.md)\)/g, (m, disp, rel) => {
+    const dir = state.cur.split("/").slice(0, -1).join("/");
+    const abs = (dir ? dir + "/" : "") + rel.replace(/^\.\//, "");
+    return byPath[abs] ? `[${disp}](#/${encodeURI(abs)})` : `${disp}（本地未收录）`;
+  });
+  return md;
+}
+async function openDoc(path, push = true) {
+  const it = byPath[path];
+  const lvl = LEVELS.find(l => l.path === path);
+  $("#load").style.display = "grid";
+  if (!it || PORTAL_DATA.docs[path] === undefined) {
+    $("#viewbox").innerHTML = `<div class="wrap viewin"><div class="err"><b>该文件不在离线资料库中</b><br>${path}<br><br>可能是其他来源的链接；<br>如需更新离线包，请重新运行 <b>启动学习门户.bat</b>。<br><br><button class="btn" onclick="goMap()">🗺 回到关卡地图</button></div></div>`;
+    $("#crumb").textContent = "未收录";
+    $("#load").style.display = "none";
+    return;
+  }
+  const text = await loadDocText(path);
+  const { meta, body } = splitFM(text);
+  const art = $("#art");
+  if (!art) $("#viewbox").innerHTML = '<div class="article" id="art"></div>';
+  const artEl = $("#art");
+  artEl.innerHTML = marked.parse(preprocess(body));
+  $("#crumb").innerHTML = `<b>${(it && it.title) || path.split("/").pop()}</b>　${meta["来源"] ? `<a href="${meta["来源"]}" target="_blank">来源</a> · ` : ""}${path}（离线包）`;
+  $("#rawlink").style.display = "none";
+  artEl.querySelectorAll("pre").forEach(pre => {
+    const b = document.createElement("button"); b.className = "cp"; b.textContent = "复制";
+    b.onclick = () => { navigator.clipboard.writeText(pre.innerText).catch(()=>{}); b.textContent = "已复制"; setTimeout(() => b.textContent = "复制", 1200); };
+    pre.appendChild(b);
+  });
+  artEl.querySelectorAll("a").forEach(a => {
+    const h = a.getAttribute("href") || "";
+    if (h.startsWith("http")) { a.target = "_blank"; return; }
+    if (h.startsWith("#/")) a.onclick = e => { e.preventDefault(); openDoc(decodeURIComponent(h.replace(/^#\//, ""))); };
+    else if (!h.startsWith("#")) a.onclick = e => { e.preventDefault(); alertMsg("站外相对链接已失效（本地快照）：" + h); };
+  });
+  if (lvl) appendLevelUI(artEl, lvl);
+  state.cur = path;
+  markCurSafe();
+  if (push) { try { history.pushState(null, "", "#/" + encodeURI(path)); } catch (e) {} }
+  $("#view").scrollTo(0, 0);
+  $("#load").style.display = "none";
+}
+function markCurSafe(){ document.querySelectorAll("#tree a").forEach(a => a.classList.toggle("cur", a.getAttribute("href") === "#/" + encodeURI(state.cur))); }
+
+/* ================= 闯关 ================= */
+function appendLevelUI(art, lvl) {
+  const dn = progress.done[lvl.path];
+  if (lvl.kind === "boss") {
+    art.insertAdjacentHTML("beforeend", `<div id="quiz" class="bossq"><h3>🎯 BOSS 关：阶段测试卷（自评）</h3>
+      <p style="font-size:14px">完成测试卷并<b>脱稿作答</b>，按参考答案自评 ≥ ${PASS_SCORE} 分即通过本关（+200 XP）。</p>
+      <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+        <input id="bossScore" class="f" style="width:110px" type="number" min="0" max="100" placeholder="0-100" value="${dn && dn.score ? dn.score : ""}">
+        <button class="btn gold" onclick="submitBoss('${lvl.path}')">提交自评分</button>
+        <span id="bossres" style="font-weight:700">${dn ? "✅ 已通关（" + dn.score + " 分）" : ""}</span>
+      </div></div>`);
+    return;
+  }
+  const qz = QUIZZES[lvl.path];
+  if (!qz) { art.insertAdjacentHTML("beforeend", `<div id="quiz"><h3>✅ 本讲完成确认</h3><button class="btn" onclick="completeLevel('${lvl.path}')">我已完成本讲学习（+100 XP）</button></div>`); return; }
+  let html = `<div id="quiz"><h3>⚔ 闯关测验（${qz.questions.length} 题 · 答对 ${qz.pass} 题通关 · +100 XP）</h3><p class="qhint">提交后自动判分，错题解析与错题本收录</p>`;
+  qz.questions.forEach((q, i) => {
+    html += `<div class="qq" id="qq${i}"><p class="q">${i + 1}. ${q.q}</p>`;
+    q.opts.forEach((o, j) => html += `<label><input type="radio" name="q${i}" value="${j}"> ${String.fromCharCode(65 + j)}. ${o}</label>`);
+    html += `<div class="why">💡 ${q.why}</div></div>`;
+  });
+  html += `<button class="btn" onclick="submitQuiz('${lvl.path}')">提交答案</button> <span id="qres">${dn ? "✅ 已通关" : ""}</span></div>`;
+  art.insertAdjacentHTML("beforeend", html);
+}
+function submitQuiz(path) {
+  const qz = QUIZZES[path];
+  let right = 0;
+  qz.questions.forEach((q, i) => {
+    const box = document.getElementById("qq" + i);
+    const sel = box.querySelector("input:checked");
+    const val = sel ? +sel.value : -1;
+    box.querySelectorAll("label").forEach((lb, j) => {
+      if (j === q.a) lb.classList.add("ok");
+      else if (j === val) lb.classList.add("no");
+    });
+    box.classList.add("done");
+    if (val === q.a) right++; else if (val !== -1) addWrong(path, i);
+  });
+  const pass = right >= qz.pass;
+  const res = document.getElementById("qres");
+  if (pass) { resolveAllWrong(path); completeLevel(path, right); res.innerHTML = `🎉 答对 ${right}/${qz.questions.length} —— 通关！+100 XP，下一关已解锁`; res.style.color = "var(--ok)"; }
+  else { res.innerHTML = `❌ 答对 ${right}/${qz.questions.length}（需 ${qz.pass}）—— 错题已进错题本，去「复习」重练`; res.style.color = "var(--bad)"; }
+  refreshTop();
+}
+function submitBoss(path) {
+  const s = +document.getElementById("bossScore").value || 0;
+  const res = document.getElementById("bossres");
+  if (s < PASS_SCORE) { res.innerHTML = `❌ ${s} 分未达 ${PASS_SCORE} 分，补弱项后再来`; res.style.color = "var(--bad)"; return; }
+  completeLevel(path, s);
+  res.innerHTML = `🏆 ${s} 分 —— BOSS 通关！+200 XP`; res.style.color = "var(--ok)";
+  refreshTop();
+}
+function completeLevel(path, score) {
+  progress.done[path] = { ts: Date.now(), score: score || "" };
+  save_(); refreshTop();
+}
+function refreshTop() {
+  const xp = xpOf(), done = totalDone();
+  $("#rank").textContent = rankOf(xp);
+  $("#xpfill").style.width = Math.min(100, Math.round(xp / 5500 * 100)) + "%";
+  $("#xptext").textContent = xp + " XP";
+  $("#xpsub").textContent = xp + " / 5500 XP · 距下一称号还差 " + nextRankGap(xp) + " XP";
+  $("#prog").textContent = "总进度 " + done + "/" + LEVELS.length;
+}
+function resetProgress(){
+  if (confirm("确定清空全部闯关进度吗？（不可恢复）")) { progress = {done:{}, free:false, wrong:[], flash:{}, resume: progress.resume || {}, theme: progress.theme || ""}; save_(); applyTheme(); renderMap(); }
+}
+$("#free").addEventListener("change", e => { progress.free = e.target.checked; save_(); renderMap(); });
+
+/* ================= 资料库侧栏 ================= */
+function buildLibTree(){
+  const tree = $("#tree"); tree.innerHTML = "";
+  const cap = document.createElement("div");
+  cap.style.cssText = "font-size:11px;color:var(--muted);padding:4px 10px";
+  cap.textContent = "全库 " + state.groups.reduce((s,g)=>s+g.items.length,0) + " 篇 · 自由浏览";
+  tree.appendChild(cap);
+  state.groups.forEach(g => {
+    const det = document.createElement("details");
+    det.open = /^(讲义|规划|资料卡片|工作区)/.test(g.name);
+    const sum = document.createElement("summary"); sum.textContent = `${g.name} `;
+    const c = document.createElement("span"); c.className = "hitcount"; c.textContent = g.items.length; sum.appendChild(c);
+    const ul = document.createElement("ul"); ul.className = "items";
+    g.items.forEach(it => ul.appendChild(itemLink(it)));
+    det.appendChild(sum); det.appendChild(ul); tree.appendChild(det);
+  });
+}
+function itemLink([p, t]) {
+  const a = document.createElement("a"); a.textContent = t; a.href = "#/" + encodeURI(p);
+  if (state.cur === p) a.classList.add("cur");
+  a.onclick = e => { e.preventDefault(); openDoc(p); };
+  return a;
+}
+function renderLib(filter){
+  const tree = $("#tree"); tree.innerHTML = "";
+  const q = (filter||"").trim().toLowerCase();
+  const hits = [];
+  state.groups.forEach(g => g.items.forEach(([p, t]) => {
+    if (!q || (t + " " + p).toLowerCase().includes(q)) hits.push([p, t, g.name]);
+  }));
+  const cap = document.createElement("div");
+  cap.style.cssText = "font-size:11px;color:var(--muted);padding:4px 10px";
+  cap.textContent = q ? `匹配 ${hits.length} 篇（显示前 120）` : `全库 ${state.groups.reduce((s,g)=>s+g.items.length,0)} 篇`;
+  tree.appendChild(cap);
+  const ul = document.createElement("ul"); ul.className = "items";
+  (q ? hits.slice(0,120) : hits).forEach(([p, t, g]) => {
+    const li = document.createElement("li"); const a = itemLink([p, t]);
+    if (q) a.textContent = `【${g.replace(/^(讲义|快照|资料|规划) · /, "")}】${t}`;
+    li.appendChild(a); ul.appendChild(li);
+  });
+  tree.appendChild(ul);
+}
+$("#search").addEventListener("input", e => { if (state.view === "lib") renderLib(e.target.value); });
+
+/* ================= 初始化 ================= */
+window.addEventListener("popstate", () => {
+  const p = decodeURIComponent(location.hash.replace(/^#\//, ""));
+  if (p && byPath[p]) openDoc(p, false);
+});
+(async function init(){
+  loadProg();
+  applyTheme();
+  $("#free").checked = !!progress.free;
+  PORTAL_DATA = await ensureData();
+  LEVELS = PORTAL_DATA.levels;
+  QUIZZES = PORTAL_DATA.quizzes;
+  PASS_SCORE = PORTAL_DATA.passScore || 80;
+  FLASH = PORTAL_DATA.flashcards;
+  state.groups = PORTAL_DATA.groups;
+  state.groups.forEach(g => g.items.forEach(([p, t]) => {
+    byPath[p] = { path: p, title: t, group: g.name };
+    const base = p.split("/").pop().replace(/\.md$/, "");
+    if (!byBase[base]) byBase[base] = p;
+  }));
+  goMap();
+  const p = decodeURIComponent(location.hash.replace(/^#\//, ""));
+  if (p && byPath[p]) openDoc(p, false);
+})();
+</script>
+</body>
+</html>
